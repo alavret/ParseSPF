@@ -109,11 +109,6 @@ def parse_spf(spf_record, original_domain, path):
                 included_spf = resolve_spf(included_domain, f'{original_domain}({element}){","+path if path else ""}')
                 if included_spf:
                     ip_list.update(included_spf)
-                    # for ip in included_spf:
-                    #     if ip in ip_list.keys():
-                    #         ip_list[ip] += ', ' + element   
-                    #     else:
-                    #         ip_list[ip] = element
                     
         except Exception as e:
             print(f"Error processing element {element}: {str(e)}")
