@@ -2,7 +2,7 @@ import dns.resolver
 import re
 from ipaddress import ip_address, ip_network
 
-def resolve_spf(domain):
+def resolve_spf(domain, path):
     """
     Извлекает и парсит SPF запись для заданного домена
     """
@@ -21,8 +21,9 @@ def resolve_spf(domain):
                 
         if not spf_record:
             return f"No SPF record found for {domain}"
-            
-        return parse_spf(spf_record, domain)
+        else:
+            print(f"SPF record for {domain}:\n{spf_record}\n")
+        return parse_spf(spf_record, domain, path)
         
     except dns.resolver.NXDOMAIN:
         return f"Domain {domain} not found"
@@ -31,7 +32,7 @@ def resolve_spf(domain):
     except Exception as e:
         return f"Error resolving SPF: {str(e)}"
 
-def parse_spf(spf_record, original_domain):
+def parse_spf(spf_record, original_domain, path):
     """
     Рекурсивно парсит SPF запись и извлекает IP адреса
     """
@@ -45,16 +46,16 @@ def parse_spf(spf_record, original_domain):
             if element.startswith('ip4:'):
                 ip = element.replace('ip4:', '')
                 if ip in ip_list.keys():
-                    ip_list[ip] += ', ip4'
+                    ip_list[ip] = f'{ip_list[ip]},{original_domain}(ip4){","+path if path else ""}'
                 else:
-                    ip_list[ip] = 'ip4'
+                    ip_list[ip] = f'{original_domain}(ip4){","+path if path else ""}'
                 
             elif element.startswith('ip6:'):
                 ip = element.replace('ip6:', '')
                 if ip in ip_list.keys():
-                    ip_list[ip] += ', ip6'
+                    ip_list[ip] = f'{ip_list[ip]},{original_domain}(ip6){","+path if path else ""}'
                 else:
-                    ip_list[ip] = 'ip6'
+                    ip_list[ip] = f'{original_domain}(ip6){","+path if path else ""}'
                 
             # Обработка MX записей
             elif element.startswith('mx'):
@@ -66,19 +67,21 @@ def parse_spf(spf_record, original_domain):
                         try:
                             a_records = dns.resolver.resolve(mx_domain, 'A')
                             for a in a_records:
-                                if str(a) in ip_list.keys():
-                                    ip_list[str(a)] += ', mx'
+                                ip = str(a)
+                                if ip in ip_list.keys():
+                                    ip_list[ip] = f'{ip_list[ip]},{original_domain}(mx){","+path if path else ""}'
                                 else:
-                                    ip_list[str(a)] = 'mx'
+                                    ip_list[ip] = f'{original_domain}(mx){","+path if path else ""}'
                         except:
                             pass
                         try:
                             aaaa_records = dns.resolver.resolve(mx_domain, 'AAAA')
                             for aaaa in aaaa_records:
-                                if str(aaaa) in ip_list.keys():
-                                    ip_list[str(aaaa)] += ', mx'
+                                ip = str(aaaa)
+                                if ip in ip_list.keys():
+                                    ip_list[ip] = f'{ip_list[ip]},{original_domain}(mx){","+path if path else ""}'
                                 else:
-                                    ip_list[str(aaaa)] = 'mx'
+                                    ip_list[ip] = f'{original_domain}(mx){","+path if path else ""}'
                         except:
                             pass
                 except:
@@ -92,23 +95,25 @@ def parse_spf(spf_record, original_domain):
                 try:
                     a_records = dns.resolver.resolve(domain, 'A')
                     for a in a_records:
-                        if str(a) in ip_list.keys():
-                            ip_list[str(a)] += ', a'
+                        ip = str(a)
+                        if ip in ip_list.keys():
+                            ip_list[ip] = f'{ip_list[ip]},{original_domain}(a){","+path if path else ""}'
                         else:
-                            ip_list[str(a)] = 'a'
+                            ip_list[ip] = f'{original_domain}(a){","+path if path else ""}'
                 except:
                     pass
                     
             # Рекурсивная обработка include
             elif element.startswith('include:') or element.startswith('redirect='):
                 included_domain = element.replace('include:', '').replace('redirect=', '')
-                included_spf = resolve_spf(included_domain)
-                if isinstance(included_spf, dict):
-                    for ip in included_spf:
-                        if ip in ip_list.keys():
-                            ip_list[ip] += ', ' + element   
-                        else:
-                            ip_list[ip] = element
+                included_spf = resolve_spf(included_domain, f'{original_domain}({element}){","+path if path else ""}')
+                if included_spf:
+                    ip_list.update(included_spf)
+                    # for ip in included_spf:
+                    #     if ip in ip_list.keys():
+                    #         ip_list[ip] += ', ' + element   
+                    #     else:
+                    #         ip_list[ip] = element
                     
         except Exception as e:
             print(f"Error processing element {element}: {str(e)}")
@@ -117,13 +122,13 @@ def parse_spf(spf_record, original_domain):
     return ip_list
 
 def main():
-    # Пример использования
+
     domain = input("Enter domain name (e.g., google.com): ")
-    result = resolve_spf(domain)
+    print('\n')
+    result = resolve_spf(domain, '')
     
     if isinstance(result, dict):
-        print(f"\nFound IP addresses for {domain} SPF record:")
-        #print(result)
+        print(f"Found IP addresses for {domain} SPF record:")
         for k,v in sorted(result.items()):
             print(f'{k}; {v}')
     else:
