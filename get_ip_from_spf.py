@@ -13,7 +13,8 @@ def resolve_spf(domain):
         
         # Ищем запись, содержащую SPF
         for rdata in answers:
-            txt_record = rdata.to_text().strip('"')
+            txt_record = rdata.to_text()
+            txt_record = txt_record.replace('" "', '').replace('"', '')
             if 'v=spf1' in txt_record:
                 spf_record = txt_record
                 break
@@ -99,8 +100,8 @@ def parse_spf(spf_record, original_domain):
                     pass
                     
             # Рекурсивная обработка include
-            elif element.startswith('include:'):
-                included_domain = element.replace('include:', '')
+            elif element.startswith('include:') or element.startswith('redirect='):
+                included_domain = element.replace('include:', '').replace('redirect=', '')
                 included_spf = resolve_spf(included_domain)
                 if isinstance(included_spf, dict):
                     for ip in included_spf:
