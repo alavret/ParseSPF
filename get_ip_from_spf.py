@@ -122,12 +122,16 @@ def main():
     print('\n')
     result = resolve_spf(domain, '')
     
-    if isinstance(result, dict):
+    if result:
         print(f"Found IP addresses for {domain} SPF record:")
-        for k,v in sorted(result.items()):
-            print(f'{k}; {v}')
+
+        with open("spf_resolve.csv", "w", encoding="utf-8") as f:
+            for k,v in sorted(result.items()):
+                print(f'{k}; {v}')
+                f.write(f'{k};{v}\n')
     else:
         print(result)
+
 
 if __name__ == "__main__":
     main()
