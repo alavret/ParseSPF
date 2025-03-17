@@ -3,6 +3,7 @@
 out
 log.log
 **/node_modules
+*.csv
 *.pyc
 *.vsix
 envVars.txt
