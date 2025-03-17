@@ -125,7 +125,7 @@ def main():
     if result:
         print(f"Found IP addresses for {domain} SPF record:")
 
-        with open("spf_resolve.csv", "w", encoding="utf-8") as f:
+        with open(f"spf_resolve_for_{domain.replace('.','_')}.csv", "w", encoding="utf-8") as f:
             for k,v in sorted(result.items()):
                 print(f'{k}; {v}')
                 f.write(f'{k};{v}\n')
